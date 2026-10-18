@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build package
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      # actions/checkout needs git inside the container
+      - name: Prepare container
+        run: pacman -Syu --noconfirm --needed git
+
+      - uses: actions/checkout@v4
+
+      # Keep this list in sync with depends=() in the PKGBUILD. Installing them
+      # explicitly means makepkg runs without --syncdeps and therefore without
+      # sudo, and a missing dependency fails the build instead of being pulled.
+      - name: Install runtime dependencies
+        run: pacman -S --noconfirm --needed gtk3 procps-ng libcap
+
+      - name: Check .SRCINFO is up to date
+        run: makepkg --printsrcinfo | diff -u .SRCINFO -
+
+      - name: Check tag matches pkgver and pkgrel
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          pkgver=$(sed -n 's/^pkgver=//p' PKGBUILD)
+          pkgrel=$(sed -n 's/^pkgrel=//p' PKGBUILD)
+          expected="v${pkgver}-${pkgrel}"
+          if [[ "${GITHUB_REF_NAME}" != "$expected" ]]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match ${expected}"
+            exit 1
+          fi
+
+      - name: Build package
+        run: |
+          set -euo pipefail
+          useradd -m builder
+          chown -R builder:builder .
+          su builder -c 'makepkg --noconfirm'
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: |
+            *.pkg.tar.zst
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: package
+          path: dist
+
+      # Stable URL for "latest": releases/latest/download/onexray-bin-x86_64.pkg.tar.zst
+      - name: Add stable file name and checksums
+        run: |
+          set -euo pipefail
+          pkg=$(ls dist/*.pkg.tar.zst)
+          cp "$pkg" dist/onexray-bin-x86_64.pkg.tar.zst
+          cd dist
+          sha256sum onexray-bin-x86_64.pkg.tar.zst > sha256sums.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.pkg.tar.zst
+            dist/sha256sums.txt
+          generate_release_notes: true

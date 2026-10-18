@@ -39,6 +39,25 @@ makepkg -si
 нужно перезапустить из приложения, иначе останется работать старая копия из
 удалённого inode.
 
+### Готовый пакет из GitHub Release
+
+На каждый тег GitHub Actions собирает пакет в чистом `archlinux:base-devel`
+и прикладывает к релизу `.pkg.tar.zst` вместе с `sha256sums.txt`:
+
+```bash
+wget https://github.com/<owner>/onexray-arch-installer/releases/latest/download/onexray-bin-x86_64.pkg.tar.zst
+wget https://github.com/<owner>/onexray-arch-installer/releases/latest/download/sha256sums.txt
+sha256sum -c sha256sums.txt
+sudo pacman -U onexray-bin-x86_64.pkg.tar.zst
+```
+
+В релизе лежат два имени: `onexray-bin-<версия>-<pkgrel>-x86_64.pkg.tar.zst`
+и стабильный алиас `onexray-bin-x86_64.pkg.tar.zst` для ссылок `latest`.
+
+CI собирает только `x86_64`. На ARM (Arch Linux ARM) используйте сборку из
+исходников пакета: `makepkg -si` в клоне репозитория подставит
+`source_aarch64` и соберёт локально.
+
 ## Миграция с ручной установки DEB/ZIP
 
 Если OneXray уже распакован вручную (как обычно и бывает: `/opt/OneXray`
@@ -71,6 +90,42 @@ GeoSite/GeoIP, выбранное в приложении, продолжит р
 
 `update.sh` работает только с официальными `.deb`-артефактами, поэтому
 контрольные суммы совпадают с теми, что публикует GitHub.
+
+### Релиз через GitHub Actions
+
+```bash
+./update.sh
+makepkg -f                                   # локальная проверка сборки
+git add -A && git commit -m "upgpkg: onexray-bin 26.10.4-1"
+./release.sh
+```
+
+`release.sh` проверяет чистоту дерева и актуальность `.SRCINFO`, ставит тег
+`v<pkgver>-<pkgrel>` и пушит его. Workflow `.github/workflows/release.yml`
+проверяет, что тег совпадает с `PKGBUILD`, собирает пакет и публикует релиз
+с артефактом. Ручной запуск workflow (`workflow_dispatch`) собирает пакет без
+публикации — удобно для проверки.
+
+Первый пуш на GitHub:
+
+```bash
+gh repo create onexray-arch-installer --public --source=. --remote=origin --push
+# или вручную:
+# git remote add origin git@github.com:<owner>/onexray-arch-installer.git
+# git push -u origin master
+```
+
+После этого замените `<owner>` в ссылках раздела «Готовый пакет из
+GitHub Release» на свой ник.
+
+Если сборка в CI упала, исправьте `PKGBUILD`, закоммитьте и переставьте тег:
+
+```bash
+TAG=v26.10.3-1   # тот, что поставил release.sh
+git tag -d "$TAG"
+git push origin ":refs/tags/$TAG"
+./release.sh
+```
 
 ## Удаление
 
