@@ -20,7 +20,7 @@ jobs:
       - name: Prepare container
         run: pacman -Syu --noconfirm --needed git
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Keep this list in sync with depends=() in the PKGBUILD. Installing them
       # explicitly means makepkg runs without --syncdeps and therefore without
@@ -28,8 +28,14 @@ jobs:
       - name: Install runtime dependencies
         run: pacman -S --noconfirm --needed gtk3 procps-ng libcap
 
+      # makepkg refuses to run as root, including --printsrcinfo.
+      - name: Create build user
+        run: |
+          useradd -m builder
+          chown builder .
+
       - name: Check .SRCINFO is up to date
-        run: makepkg --printsrcinfo | diff -u .SRCINFO -
+        run: su builder -c 'makepkg --printsrcinfo' | diff -u .SRCINFO -
 
       - name: Check tag matches pkgver and pkgrel
         if: startsWith(github.ref, 'refs/tags/')
@@ -44,18 +50,13 @@ jobs:
           fi
 
       - name: Build package
-        run: |
-          set -euo pipefail
-          useradd -m builder
-          chown -R builder:builder .
-          su builder -c 'makepkg --noconfirm'
+        run: su builder -c 'makepkg --noconfirm'
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: package
-          path: |
-            *.pkg.tar.zst
+          path: '*.pkg.tar.zst'
           if-no-files-found: error
 
   release:
@@ -64,7 +65,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: package
           path: dist
@@ -78,7 +79,7 @@ jobs:
           cd dist
           sha256sum onexray-bin-x86_64.pkg.tar.zst > sha256sums.txt
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/*.pkg.tar.zst
