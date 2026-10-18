@@ -98,6 +98,23 @@ sudo pacman -Rns onexray-bin
   `libayatana-appindicator` не линкуется. В GNOME для иконки в трее нужно
   расширение AppIndicator; в Hyprland/Waybar SNI поддерживается из коробки.
 
+## Публикация в AUR
+
+AUR принимает только ветку `master` и только файлы из корня репозитория
+(`PKGBUILD`, `.SRCINFO`, локальные источники вроде `onexray-caps.hook`,
+`LICENSE`). Собранные пакеты и подкаталоги (кроме `keys/` и `LICENSES/`)
+хуком отклоняются.
+
+```bash
+# один раз: аккаунт и SSH-ключ на https://aur.archlinux.org
+git branch -m main master
+git remote add aur ssh://aur@aur.archlinux.org/onexray-bin.git
+git push aur master
+```
+
+Перед каждым пушем: `makepkg --printsrcinfo > .SRCINFO`, затем
+`git add -A && git commit -m "upgpkg: onexray-bin <версия>-<pkgrel>"`.
+
 ## Наблюдения по upstream-артефактам
 
 - Официального AUR-пакета нет, Linux-сборки распространяются только как DEB и ZIP.

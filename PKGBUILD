@@ -1,4 +1,4 @@
-# Maintainer: Arkady Chelyadnikov <prbrq@ya.ru>
+# Maintainer: Arkady Chelyadnikov <prbrq at ya dot ru>
 
 pkgname=onexray-bin
 pkgver=26.10.3
