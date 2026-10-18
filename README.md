@@ -45,8 +45,8 @@ makepkg -si
 и прикладывает к релизу `.pkg.tar.zst` вместе с `sha256sums.txt`:
 
 ```bash
-wget https://github.com/<owner>/onexray-arch-installer/releases/latest/download/onexray-bin-x86_64.pkg.tar.zst
-wget https://github.com/<owner>/onexray-arch-installer/releases/latest/download/sha256sums.txt
+wget https://github.com/prbrq/onexray-arch-installer/releases/latest/download/onexray-bin-x86_64.pkg.tar.zst
+wget https://github.com/prbrq/onexray-arch-installer/releases/latest/download/sha256sums.txt
 sha256sum -c sha256sums.txt
 sudo pacman -U onexray-bin-x86_64.pkg.tar.zst
 ```
@@ -111,12 +111,9 @@ git add -A && git commit -m "upgpkg: onexray-bin 26.10.4-1"
 ```bash
 gh repo create onexray-arch-installer --public --source=. --remote=origin --push
 # или вручную:
-# git remote add origin git@github.com:<owner>/onexray-arch-installer.git
+# git remote add origin git@github.com:prbrq/onexray-arch-installer.git
 # git push -u origin master
 ```
-
-После этого замените `<owner>` в ссылках раздела «Готовый пакет из
-GitHub Release» на свой ник.
 
 Если сборка в CI упала, исправьте `PKGBUILD`, закоммитьте и переставьте тег:
 
