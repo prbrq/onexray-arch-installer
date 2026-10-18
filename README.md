@@ -8,6 +8,10 @@ OneXray — клиент на Xray-core: TUN-режим, Smart Routing, импо
 (outbound / Custom / Advanced / Raw), подписки Remnawave. Серверов и подписок
 в поставке нет — их выдаёт провайдер.
 
+[![Release](https://img.shields.io/github/v/release/prbrq/onexray-arch-installer?label=release&logo=github)](https://github.com/prbrq/onexray-arch-installer/releases/latest)
+[![Release workflow](https://github.com/prbrq/onexray-arch-installer/actions/workflows/release.yml/badge.svg)](https://github.com/prbrq/onexray-arch-installer/actions/workflows/release.yml)
+[![Upstream update](https://github.com/prbrq/onexray-arch-installer/actions/workflows/upstream.yml/badge.svg)](https://github.com/prbrq/onexray-arch-installer/actions/workflows/upstream.yml)
+
 ## Что делает пакет
 
 | Что | Куда |
@@ -123,6 +127,21 @@ git tag -d "$TAG"
 git push origin ":refs/tags/$TAG"
 ./release.sh
 ```
+
+### Еженедельная проверка upstream
+
+`.github/workflows/upstream.yml` запускается по понедельникам в 06:00 UTC и
+вручную:
+
+1. выполняет `update.sh` в контейнере `archlinux:base-devel`;
+2. если версия или контрольные суммы изменились, проверяет загрузку
+   исходников (`makepkg --verifysource --noconfirm`);
+3. создаёт ветку `update/onexray-<версия>` и PR с `PKGBUILD` и `.SRCINFO`.
+
+Merge PR → `./release.sh` → тег → сборка и публикация релиза. PR создаётся
+ботом через `GITHUB_TOKEN`, поэтому workflow на таком PR автоматически не
+запускается — сборка проверяется уже на теге. Если upstream не изменился,
+job пишет «Upstream is unchanged» и завершается.
 
 ## Удаление
 

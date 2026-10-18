@@ -1,0 +1,81 @@
+name: Upstream update
+
+on:
+  schedule:
+    # Mondays, 06:00 UTC. GitHub may delay scheduled runs.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Check upstream release
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Prepare container
+        run: pacman -Syu --noconfirm --needed git curl python github-cli
+
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+
+      - name: Update packaging files
+        id: update
+        run: |
+          set -euo pipefail
+          useradd -m builder
+          chown -R builder:builder .
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          su builder -c './update.sh'
+
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Upstream is unchanged." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          version=$(sed -n 's/^pkgver=//p' PKGBUILD)
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          # Catch a broken URL or a wrong checksum before opening the PR.
+          su builder -c 'makepkg --verifysource --noconfirm'
+
+      - name: Open pull request
+        if: steps.update.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.update.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          branch="update/onexray-${VERSION}"
+
+          if gh pr list --head "$branch" --state open --json number --jq '.[0].number' | grep -q .; then
+            echo "A pull request for ${branch} is already open." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add PKGBUILD .SRCINFO
+          git commit -m "upgpkg: onexray-bin ${VERSION}-1"
+          git push -f -u origin "$branch"
+
+          body=$(printf 'Автоматическое обновление до upstream v%s.\n\n- upstream: https://github.com/YuanDevTeam/OneXray/releases/tag/v%s\n- изменены: `PKGBUILD`, `.SRCINFO`\n- проверено: загрузка исходников и контрольные суммы (`makepkg --verifysource`)\n\nПосле мержа: `./release.sh` — тег `v%s-1` запустит сборку и публикацию релиза.' "$VERSION" "$VERSION" "$VERSION")
+
+          url=$(gh pr create --base master --head "$branch" \
+            --title "upgpkg: onexray-bin ${VERSION}-1" \
+            --body "$body")
+          echo "$url" >> "$GITHUB_STEP_SUMMARY"
