@@ -1,7 +1,7 @@
 # Maintainer: Arkady Chelyadnikov <prbrq at ya dot ru>
 
 pkgname=onexray-bin
-pkgver=26.10.3
+pkgver=26.11.4
 pkgrel=1
 pkgdesc='Cross-platform Xray-core client with TUN mode, smart routing and JSON configuration import'
 arch=('x86_64' 'aarch64')
@@ -20,9 +20,9 @@ _gh="https://github.com/YuanDevTeam/OneXray/releases/download/v${pkgver}"
 # The upstream package names (x86_64 / aarch64) match Arch's $CARCH.
 source_x86_64=("${_gh}/OneXray-linux-x86_64.deb" "onexray-caps.hook")
 source_aarch64=("${_gh}/OneXray-linux-aarch64.deb" "onexray-caps.hook")
-sha256sums_x86_64=('fdb40a7018a9b2ab2890375602eee956f7715a997a58d9e8a053fdca4fceca79'
+sha256sums_x86_64=('4ae818ab20d18f9b2a3625f8ad6a59a945b1b17cac671ea78f39f52643c7543e'
                    '7904b4dca61048f21336f604ffa834e2eba0160fde8868cef9bbc3207616a5b9')
-sha256sums_aarch64=('5c5fd680d5d4cf3f8573855403bceab46c31ad76633a0d6fd317a961896c00af'
+sha256sums_aarch64=('4ad8b482b02ffbd1cf97eee70f28b85e1cbf165fae43670de243ee547b5cca2c'
                     '7904b4dca61048f21336f604ffa834e2eba0160fde8868cef9bbc3207616a5b9')
 
 package() {
